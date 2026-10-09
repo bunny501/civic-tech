@@ -1,0 +1,91 @@
+/* Hallmark · genre: editorial · macrostructure: Map Diagram · theme: Newsprint */
+@import "tailwindcss";
+
+@theme inline {
+  --color-paper: var(--color-paper-1);
+  --color-paper-2: var(--color-paper-2);
+  --color-paper-3: var(--color-paper-3);
+  --color-ink: var(--color-ink-1);
+  --color-ink-2: var(--color-ink-2);
+  --color-ink-3: var(--color-ink-3);
+  --color-accent: var(--color-accent-1);
+  --color-accent-2: var(--color-accent-2);
+  
+  --font-display: var(--font-newsreader), serif;
+  --font-body: var(--font-newsreader), serif;
+  --font-sans: var(--font-inter), sans-serif;
+}
+
+:root {
+  /* Newsprint Theme */
+  --color-paper-1: oklch(96% 0.01 90); /* warm light paper */
+  --color-paper-2: oklch(93% 0.01 90);
+  --color-paper-3: oklch(90% 0.01 90);
+  
+  --color-ink-1: oklch(25% 0.01 250); /* charcoal */
+  --color-ink-2: oklch(45% 0.01 250);
+  --color-ink-3: oklch(65% 0.01 250);
+  
+  --color-accent-1: oklch(45% 0.15 30); /* brick red */
+  --color-accent-2: oklch(55% 0.15 30);
+
+  /* Status semantics */
+  --color-status-ongoing: oklch(55% 0.12 140); /* green */
+  --color-status-delayed: oklch(60% 0.15 30); /* red/orange */
+  --color-status-planned: oklch(60% 0.12 250); /* blue */
+  --color-status-completed: oklch(40% 0.02 250); /* dark grey */
+  --color-status-paused: oklch(60% 0.12 80); /* amber */
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-paper-1);
+  color: var(--color-ink-1);
+  /* Hallmark: no horizontal scroll */
+  overflow-x: clip; 
+}
+
+/* Typography elements */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-style: normal; /* No italic headers */
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* Leaflet override to fit the theme */
+.leaflet-container {
+  font-family: var(--font-sans);
+  background: var(--color-paper-2) !important;
+}
+.leaflet-popup-content-wrapper {
+  background: var(--color-paper-1) !important;
+  color: var(--color-ink-1) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+  border: 1px solid var(--color-ink-3);
+}
+.leaflet-popup-tip {
+  background: var(--color-paper-1) !important;
+}
+
+/* Form elements */
+input, select, textarea {
+  font-family: var(--font-sans);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-paper-2);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-ink-3);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-2);
+}
