@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
-import { Newsreader, Inter } from "next/font/google";
+import { Newsreader, Inter, DM_Serif_Display } from "next/font/google";
 import "./globals.css";
+
+const dmSerifDisplay = DM_Serif_Display({
+  variable: "--font-dm-serif",
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+});
 
 const newsreader = Newsreader({
   variable: "--font-newsreader",
@@ -23,8 +30,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${newsreader.variable} ${inter.variable}`}>
-      <body className="antialiased overflow-x-clip min-h-screen bg-paper text-ink">
+    <html lang="en" className={`${dmSerifDisplay.variable} ${newsreader.variable} ${inter.variable}`}>
+      <body className="antialiased overflow-x-clip min-h-screen">
         {children}
       </body>
     </html>

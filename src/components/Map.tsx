@@ -66,16 +66,6 @@ type MapProps = {
 };
 
 export default function CivicMap({ projects, conflicts, selectedProjectId, onSelectProject }: MapProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <div className="w-full h-full bg-paper-2 flex items-center justify-center font-sans text-ink-3">Loading map...</div>;
-  }
-
   // Default center if no projects
   let center: [number, number] = [40.7128, -74.0060];
   let zoom = 13;
