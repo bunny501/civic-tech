@@ -1,12 +1,11 @@
-/* Hallmark · macrostructure: Narrative Workflow · tone: technical-editorial · anchor hue: forest-green
- * landing theme: Studio · workspace theme: Newsprint
- * pre-emit critique: P5 H4 E5 S5 R5 V5
- * fonts: DM Serif Display (display, Google Fonts, OFL) + Inter (interface, Google Fonts, OFL) + Newsreader (body)
+/* Hallmark · genre: modern-minimal · macrostructure: Workbench · theme: Clean Civic
+ * pre-emit critique: P5 H5 E5 S5 R5 V5
+ * fonts: Inter (interface & display, Google Fonts, OFL)
  */
 @import "tailwindcss";
 
 @theme inline {
-  /* ── Workspace (Newsprint) theme tokens ── */
+  /* ── Workspace clean modern-minimal tokens ── */
   --color-paper: var(--color-paper-1);
   --color-paper-2: var(--color-paper-2);
   --color-paper-3: var(--color-paper-3);
@@ -17,9 +16,9 @@
   --color-accent-2: var(--color-accent-2);
   
   /* ── Font tokens ── */
-  --font-display: var(--font-dm-serif), "Georgia", serif;
+  --font-display: var(--font-inter), system-ui, sans-serif;
   --font-editorial: var(--font-newsreader), serif;
-  --font-body: var(--font-newsreader), serif;
+  --font-body: var(--font-inter), system-ui, sans-serif;
   --font-sans: var(--font-inter), system-ui, sans-serif;
 
   /* ── Landing (Studio) theme tokens ── */
@@ -43,10 +42,10 @@
   --space-4xl: 9rem;
 
   /* ── Type scale ── */
-  --text-display: clamp(3rem, 8vw, 6.5rem);
-  --text-display-s: clamp(2rem, 5vw, 3.75rem);
-  --text-4xl: clamp(1.75rem, 4vw, 2.5rem);
-  --text-3xl: clamp(1.375rem, 3vw, 1.875rem);
+  --text-display: clamp(2rem, 4vw, 3.25rem);
+  --text-display-s: clamp(1.5rem, 3vw, 2.25rem);
+  --text-4xl: clamp(1.5rem, 3vw, 2rem);
+  --text-3xl: clamp(1.25rem, 2.5vw, 1.5rem);
   --text-xl: 1.25rem;
   --text-base: 1rem;
   --text-sm: 0.875rem;
@@ -62,25 +61,24 @@
 }
 
 :root {
-  /* ── Workspace (Newsprint) palette ── */
-  --color-paper-1: oklch(96% 0.008 90);
-  --color-paper-2: oklch(93% 0.008 90);
-  --color-paper-3: oklch(90% 0.008 90);
-  --color-ink-1: oklch(22% 0.01 250);
-  --color-ink-2: oklch(42% 0.01 250);
-  --color-ink-3: oklch(62% 0.01 250);
-  --color-accent-1: oklch(42% 0.14 30);
-  --color-accent-2: oklch(52% 0.14 30);
+  /* ── Workspace (Clean Modern Minimal) palette ── */
+  --color-paper-1: #ffffff;
+  --color-paper-2: #f8fafc;
+  --color-paper-3: #f1f5f9;
+  --color-ink-1: #0f172a;
+  --color-ink-2: #475569;
+  --color-ink-3: #94a3b8;
+  --color-accent-1: #2563eb;
+  --color-accent-2: #1d4ed8;
 
   /* Status semantics (workspace) */
-  --color-status-ongoing: oklch(52% 0.13 140);
-  --color-status-delayed: oklch(57% 0.15 30);
-  --color-status-planned: oklch(55% 0.12 250);
-  --color-status-completed: oklch(38% 0.02 250);
-  --color-status-paused: oklch(58% 0.12 80);
+  --color-status-ongoing: #059669;
+  --color-status-delayed: #e11d48;
+  --color-status-planned: #2563eb;
+  --color-status-completed: #64748b;
+  --color-status-paused: #d97706;
 
   /* ── Landing (Studio) palette ── */
-  /* Studio: near-white canvas, charcoal ink, forest-green accent */
   --color-land-bg-val: oklch(98% 0.005 120);
   --color-land-ink-val: oklch(18% 0.01 250);
   --color-land-ink-2-val: oklch(38% 0.01 250);
@@ -93,8 +91,8 @@
 
 /* ── Base styles (workspace) ── */
 body {
-  font-family: var(--font-editorial);
-  background-color: var(--color-paper-1);
+  font-family: var(--font-sans);
+  background-color: var(--color-paper-2);
   color: var(--color-ink-1);
   overflow-x: clip;
 }
@@ -117,7 +115,7 @@ h1, h2, h3, h4, h5, h6 {
 .landing-root h3 {
   font-family: var(--font-display);
   font-style: normal;
-  font-weight: 400;
+  font-weight: 500;
   overflow-wrap: anywhere;
   min-width: 0;
 }
@@ -125,17 +123,17 @@ h1, h2, h3, h4, h5, h6 {
 /* ── Leaflet overrides (workspace) ── */
 .leaflet-container {
   font-family: var(--font-sans);
-  background: var(--color-paper-2) !important;
+  background: #f1f5f9 !important;
 }
 .leaflet-popup-content-wrapper {
-  background: var(--color-paper-1) !important;
-  color: var(--color-ink-1) !important;
-  border-radius: 0 !important;
-  box-shadow: 0 4px 12px oklch(0% 0 0 / 0.1) !important;
-  border: 1px solid var(--color-ink-3);
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1) !important;
+  border: 1px solid #e2e8f0;
 }
 .leaflet-popup-tip {
-  background: var(--color-paper-1) !important;
+  background: #ffffff !important;
 }
 
 /* ── Form elements ── */
@@ -145,15 +143,15 @@ input, select, textarea {
 
 /* ── Focus ring ── */
 :focus-visible {
-  outline: 2px solid var(--color-land-accent);
-  outline-offset: 3px;
+  outline: 2px solid var(--color-accent-1);
+  outline-offset: 2px;
 }
 
 /* ── Scrollbar ── */
-::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--color-paper-2); }
-::-webkit-scrollbar-thumb { background: var(--color-ink-3); }
-::-webkit-scrollbar-thumb:hover { background: var(--color-ink-2); }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
