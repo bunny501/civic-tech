@@ -26,7 +26,7 @@ function executeOfflineFallback(prompt: string): string {
   }
 
   // Conflict query
-  if (lower.includes('conflict') || lower.includes('clash') || lower.includes('overlap') || lower.includes('excavation')) {
+  if (lower.includes('conflict') || lower.includes('clash') || lower.includes('overlap') || lower.includes('excavation') || lower.includes('water')) {
     const conflicts = detectConflicts(mockProjects);
     if (conflicts.length > 0) {
       const items = conflicts.map(c => {
@@ -77,121 +77,132 @@ export async function POST(req: Request) {
     }
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    
-    const chat = ai.chats.create({
-      model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
-      config: {
-        systemInstruction: `You are a bounded read-only coordination agent for CivicTech.
-          You investigate public works projects using tools.
-          Rules:
-          1. Only use tools provided.
-          2. Base answers on tool findings.
-          3. Distinguish facts (from tools), calculations (from tools), and your own estimates.
-          4. If data cannot answer, say so. Missing explanation is not proof of misconduct.
-          5. Cite project IDs/titles in responses.`,
-        tools: [{
-          functionDeclarations: [
-            {
-              name: 'searchProjects',
-              description: 'Search for projects by status, work type, or department.',
-              parameters: {
-                type: Type.OBJECT,
-                properties: {
-                  status: { type: Type.STRING },
-                  workType: { type: Type.STRING },
-                  department: { type: Type.STRING }
+    const modelName = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+
+    // 7-second hard timeout for the Gemini API call to prevent any hanging
+    const aiExecutionPromise = (async () => {
+      const initialRes = await ai.models.generateContent({
+        model: modelName,
+        contents: userPrompt,
+        config: {
+          systemInstruction: `You are a bounded read-only coordination agent for CivicTech.
+            Investigate public works using tools.
+            Rules:
+            1. Base answers on tool findings.
+            2. Missing explanation is not proof of misconduct.
+            3. Cite project IDs/titles in responses.`,
+          tools: [{
+            functionDeclarations: [
+              {
+                name: 'searchProjects',
+                description: 'Search for projects by status, work type, or department.',
+                parameters: {
+                  type: Type.OBJECT,
+                  properties: {
+                    status: { type: Type.STRING },
+                    workType: { type: Type.STRING },
+                    department: { type: Type.STRING }
+                  }
+                }
+              },
+              {
+                name: 'getProjectDetails',
+                description: 'Get full details of a specific project by ID.',
+                parameters: {
+                  type: Type.OBJECT,
+                  properties: { projectId: { type: Type.STRING } },
+                  required: ['projectId'] as any
+                }
+              },
+              {
+                name: 'getProjectTimeline',
+                description: 'Analyze delay and timeline for a specific project.',
+                parameters: {
+                  type: Type.OBJECT,
+                  properties: { projectId: { type: Type.STRING } },
+                  required: ['projectId'] as any
+                }
+              },
+              {
+                name: 'findConflicts',
+                description: 'Check deterministic conflicts involving a specific project.',
+                parameters: {
+                  type: Type.OBJECT,
+                  properties: { projectId: { type: Type.STRING } },
+                  required: ['projectId'] as any
+                }
+              },
+              {
+                name: 'getNeighborhoodWorks',
+                description: 'Find projects near a specific coordinate within a date window.',
+                parameters: {
+                  type: Type.OBJECT,
+                  properties: {
+                    latitude: { type: Type.NUMBER },
+                    longitude: { type: Type.NUMBER },
+                    radiusMeters: { type: Type.NUMBER }
+                  },
+                  required: ['latitude', 'longitude'] as any
                 }
               }
-            },
-            {
-              name: 'getProjectDetails',
-              description: 'Get full details of a specific project by ID.',
-              parameters: {
-                type: Type.OBJECT,
-                properties: { projectId: { type: Type.STRING } },
-                required: ['projectId'] as any
-              }
-            },
-            {
-              name: 'getProjectTimeline',
-              description: 'Analyze delay and timeline for a specific project.',
-              parameters: {
-                type: Type.OBJECT,
-                properties: { projectId: { type: Type.STRING } },
-                required: ['projectId'] as any
-              }
-            },
-            {
-              name: 'findConflicts',
-              description: 'Check deterministic conflicts involving a specific project.',
-              parameters: {
-                type: Type.OBJECT,
-                properties: { projectId: { type: Type.STRING } },
-                required: ['projectId'] as any
-              }
-            },
-            {
-              name: 'getNeighborhoodWorks',
-              description: 'Find projects near a specific coordinate within a date window.',
-              parameters: {
-                type: Type.OBJECT,
-                properties: {
-                  latitude: { type: Type.NUMBER },
-                  longitude: { type: Type.NUMBER },
-                  radiusMeters: { type: Type.NUMBER }
-                },
-                required: ['latitude', 'longitude'] as any
-              }
-            }
-          ]
-        }]
-      }
-    });
+            ]
+          }]
+        }
+      });
 
-    let response = await chat.sendMessage({ message: userPrompt });
-    
-    // Bounded loop: max 3 tool calls
-    let iterations = 0;
-    while (response.functionCalls && response.functionCalls.length > 0 && iterations < 3) {
-      iterations++;
-      const toolResponses = [];
-      
-      for (const call of response.functionCalls) {
-        let result: any;
+      if (initialRes.functionCalls && initialRes.functionCalls.length > 0) {
+        const call = initialRes.functionCalls[0];
+        let toolResult: any;
         try {
           const args = call.args as any;
-          if (call.name === 'searchProjects') result = await agentTools.searchProjects.execute(args);
-          else if (call.name === 'getProjectDetails') result = await agentTools.getProjectDetails.execute(args);
-          else if (call.name === 'getProjectTimeline') result = await agentTools.getProjectTimeline.execute(args);
-          else if (call.name === 'findConflicts') result = await agentTools.findConflicts.execute(args);
-          else if (call.name === 'getNeighborhoodWorks') result = await agentTools.getNeighborhoodWorks.execute(args);
-          else result = { error: 'Unknown tool' };
+          if (call.name === 'searchProjects') toolResult = await agentTools.searchProjects.execute(args);
+          else if (call.name === 'getProjectDetails') toolResult = await agentTools.getProjectDetails.execute(args);
+          else if (call.name === 'getProjectTimeline') toolResult = await agentTools.getProjectTimeline.execute(args);
+          else if (call.name === 'findConflicts') toolResult = await agentTools.findConflicts.execute(args);
+          else if (call.name === 'getNeighborhoodWorks') toolResult = await agentTools.getNeighborhoodWorks.execute(args);
+          else toolResult = { error: 'Unknown tool' };
         } catch (e: any) {
-          result = { error: e.message };
+          toolResult = { error: e.message };
         }
-        toolResponses.push({
-          functionResponse: {
-            name: call.name,
-            response: result
+
+        const followUpRes = await ai.models.generateContent({
+          model: modelName,
+          contents: [
+            { role: 'user', parts: [{ text: userPrompt }] },
+            (initialRes.candidates?.[0]?.content as any) || { role: 'model', parts: [{ functionCall: call }] },
+            {
+              role: 'user',
+              parts: [{
+                functionResponse: {
+                  name: call.name,
+                  response: toolResult
+                }
+              }]
+            }
+          ],
+          config: {
+            systemInstruction: `You are a bounded read-only coordination agent for CivicTech. Synthesize tool findings concisely.`
           }
         });
+
+        return followUpRes.text || executeOfflineFallback(userPrompt);
       }
-      
-      response = await chat.sendMessage({
-        message: toolResponses as any
-      });
-    }
 
-    if (iterations >= 3) {
-      return NextResponse.json({ text: (response.text || '') + '\n\n[Agent stopped: Maximum investigation steps reached.]' });
-    }
+      return initialRes.text || executeOfflineFallback(userPrompt);
+    })();
 
-    return NextResponse.json({ text: response.text || executeOfflineFallback(userPrompt) });
+    const timeoutPromise = new Promise<string>((_, reject) => {
+      setTimeout(() => reject(new Error('AI provider timed out after 7s')), 7000);
+    });
+
+    const resultText = await Promise.race([aiExecutionPromise, timeoutPromise]);
+    return NextResponse.json({ text: resultText });
+
   } catch (error: any) {
-    console.error('Agent error, falling back to deterministic response:', error);
+    console.error('Agent error / timeout, falling back:', error);
     const fallbackText = executeOfflineFallback(userPrompt);
     return NextResponse.json({ 
-      text: fallbackText + `\n\n*(Note: Operating in deterministic verification mode. Provider error: ${error?.message || 'AI provider unavailable'})*`
+      text: fallbackText + `\n\n*(Note: Switched to deterministic offline analysis. ${error?.message || 'AI provider unavailable'})*`
     });
   }
 }

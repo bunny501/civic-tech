@@ -74,7 +74,8 @@ export default function Workspace() {
       const res = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
+        body: JSON.stringify({ prompt }),
+        signal: AbortSignal.timeout(10000)
       });
       const data = await res.json();
       if (res.ok) {
@@ -83,7 +84,11 @@ export default function Workspace() {
         setAgentMessages(prev => [...prev, { role: 'agent', content: `Error: ${data.error}` }]);
       }
     } catch (e: any) {
-      setAgentMessages(prev => [...prev, { role: 'agent', content: `Network Error: ${e.message}` }]);
+      if (e.name === 'TimeoutError' || e.name === 'AbortError') {
+        setAgentMessages(prev => [...prev, { role: 'agent', content: 'Investigation request timed out. Please ask again.' }]);
+      } else {
+        setAgentMessages(prev => [...prev, { role: 'agent', content: `Network Error: ${e.message}` }]);
+      }
     } finally {
       setIsAgentTyping(false);
     }
