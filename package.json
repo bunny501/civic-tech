@@ -1,12 +1,13 @@
 {
-  "name": "temp-app",
+  "name": "civic-tech",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run"
   },
   "dependencies": {
     "@google/genai": "^2.28.0",
