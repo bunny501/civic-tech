@@ -18,7 +18,7 @@ CivicTech is an autonomous intelligence platform for public works transparency, 
 - **UI & Styling**: React 19, Tailwind CSS v4 (incorporating the Hallmark technical-editorial visual system)
 - **Map Ecosystem**: `leaflet`, `react-leaflet`, `leaflet-geosearch`
 - **Data Validation & Modeling**: `zod`, `date-fns`
-- **AI & PDF Processing**: `@google/genai` (Gemini 2.5 Flash), `unpdf`
+- **AI & PDF Processing**: `@google/genai` (Gemini 3.8 Flash), `unpdf`
 - **Testing**: `vitest`
 
 ## Setup and Run Commands

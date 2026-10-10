@@ -79,7 +79,7 @@ export async function POST(req: Request) {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     
     const chat = ai.chats.create({
-      model: 'gemini-2.5-flash',
+      model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
       config: {
         systemInstruction: `You are a bounded read-only coordination agent for CivicTech.
           You investigate public works projects using tools.
