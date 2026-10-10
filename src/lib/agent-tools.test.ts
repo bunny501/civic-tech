@@ -20,4 +20,11 @@ describe('Agent Tools', () => {
     const result = await agentTools.getProjectDetails.execute({ projectId: 'invalid' });
     expect((result as any).error).toBeDefined();
   });
+
+  it('getProjectTimeline calculates delay accurately for delayed project', async () => {
+    const result = await agentTools.getProjectTimeline.execute({ projectId: 'proj-3' });
+    expect((result as any).isOverdue).toBe(true);
+    expect((result as any).daysLate).toBeGreaterThan(0);
+  });
 });
+

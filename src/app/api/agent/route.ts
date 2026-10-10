@@ -1,32 +1,82 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI, Type } from '@google/genai';
 import { agentTools } from '@/lib/agent-tools';
+import { mockProjects } from '@/lib/data';
+import { analyzeDelay } from '@/lib/timeline';
+import { detectConflicts } from '@/lib/conflicts';
 
-// Simple mapping to AI SDK/GenAI tool format
-const tools = Object.entries(agentTools).map(([name, tool]) => ({
-  name,
-  description: tool.description,
-  // Zod to JSON Schema rough conversion for GenAI
-  // Note: For a robust implementation, use zod-to-json-schema. 
-  // We'll hardcode the schema formats for simplicity here since tools are known.
-}));
+function executeOfflineFallback(prompt: string): string {
+  const lower = prompt.toLowerCase();
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'dummy' });
+  // Delay / Schedule analysis query
+  if (lower.includes('delay') || lower.includes('overdue') || lower.includes('late') || lower.includes('timeline') || lower.includes('why')) {
+    const delayed = mockProjects
+      .map(p => ({ project: p, finding: analyzeDelay(p) }))
+      .filter(item => item.finding !== null || item.project.status === 'delayed');
+
+    if (delayed.length > 0) {
+      const items = delayed.map(({ project, finding }) => {
+        const days = finding?.daysLate ? `${finding.daysLate} days` : 'past scheduled deadline';
+        return `• **${project.title}** (${project.id}):\n  - Department: ${project.department || 'Not listed'}\n  - Status: ${project.status} (${days})\n  - Planned schedule: ${project.plannedStartDate} to ${project.plannedEndDate}\n  - Recorded Details: ${project.description}\n  - Evidence Note: Under CivicTech data truth rules, an absent recorded explanation indicates no explanation was provided in available municipal records (${project.sourceIds.join(', ')}), not proof of misconduct.`;
+      }).join('\n\n');
+
+      return `[Coordination Agent Intelligence]\n\nBased on verified schedule records across municipal projects:\n\n${items}`;
+    }
+    return `[Coordination Agent Intelligence]\n\nNo active municipal projects are currently recorded as overdue or delayed in the registry.`;
+  }
+
+  // Conflict query
+  if (lower.includes('conflict') || lower.includes('clash') || lower.includes('overlap') || lower.includes('excavation')) {
+    const conflicts = detectConflicts(mockProjects);
+    if (conflicts.length > 0) {
+      const items = conflicts.map(c => {
+        const pTitles = c.projectIds.map(id => mockProjects.find(p => p.id === id)?.title || id).join(' AND ');
+        return `• **${c.type.toUpperCase().replace('_', ' ')}** (Severity: ${c.severity}):\n  - Projects: ${pTitles}\n  - Proximity: ${c.spatialBasis || 'N/A'}\n  - Timeline: ${c.temporalBasis || 'N/A'}\n  - Explanation: ${c.reason}`;
+      }).join('\n\n');
+      return `[Coordination Agent Intelligence]\n\nDetected ${conflicts.length} cross-department coordination conflict(s):\n\n${items}`;
+    }
+    return `[Coordination Agent Intelligence]\n\nNo physical or schedule overlaps detected among active projects.`;
+  }
+
+  // Work type or specific project query (e.g. water, road, fiber)
+  const matches = mockProjects.filter(p => 
+    lower.includes(p.workType.toLowerCase()) || 
+    lower.includes(p.title.toLowerCase()) ||
+    (p.department && lower.includes(p.department.toLowerCase()))
+  );
+
+  if (matches.length > 0) {
+    const items = matches.map(p => 
+      `• **${p.title}** (${p.id}):\n  - Type: ${p.workType} | Status: ${p.status}\n  - Department: ${p.department || 'TBD'}\n  - Location: ${p.addressText}\n  - Planned Window: ${p.plannedStartDate} to ${p.plannedEndDate}`
+    ).join('\n\n');
+    return `[Coordination Agent Intelligence]\n\nFound matching projects for your inquiry:\n\n${items}`;
+  }
+
+  // General overview
+  return `[Coordination Agent Intelligence]\n\nCivicTech currently monitors ${mockProjects.length} infrastructure projects in the registry:\n` +
+    mockProjects.map(p => `• **${p.title}** (${p.status}) — ${p.workType} work by ${p.department || 'City Dept'}`).join('\n') +
+    `\n\nYou can ask about specific project delays, cross-department conflicts, or neighborhood locations.`;
+}
 
 export async function POST(req: Request) {
+  let userPrompt = '';
   try {
-    const { prompt } = await req.json();
+    const body = await req.json();
+    userPrompt = body?.prompt || '';
 
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json(
-        { error: 'AI provider is not configured. (Missing GEMINI_API_KEY)' },
-        { status: 503 }
-      );
+    if (!userPrompt.trim()) {
+      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    // Implementing a bounded loop for tool calling
-    // We will do a simplistic approach for demonstration
-    // @google/genai handles tool calling via chat sessions usually.
+    // Graceful offline fallback if GEMINI_API_KEY is not configured
+    if (!process.env.GEMINI_API_KEY) {
+      const fallbackText = executeOfflineFallback(userPrompt);
+      return NextResponse.json({ 
+        text: fallbackText + '\n\n*(Note: Operating in deterministic verification mode. Configure GEMINI_API_KEY for generative synthesis.)*'
+      });
+    }
+
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     
     const chat = ai.chats.create({
       model: 'gemini-2.5-flash',
@@ -37,7 +87,7 @@ export async function POST(req: Request) {
           1. Only use tools provided.
           2. Base answers on tool findings.
           3. Distinguish facts (from tools), calculations (from tools), and your own estimates.
-          4. If data cannot answer, say so.
+          4. If data cannot answer, say so. Missing explanation is not proof of misconduct.
           5. Cite project IDs/titles in responses.`,
         tools: [{
           functionDeclarations: [
@@ -98,7 +148,7 @@ export async function POST(req: Request) {
       }
     });
 
-    let response = await chat.sendMessage({ message: prompt });
+    let response = await chat.sendMessage({ message: userPrompt });
     
     // Bounded loop: max 3 tool calls
     let iterations = 0;
@@ -127,19 +177,21 @@ export async function POST(req: Request) {
         });
       }
       
-      response = await chat.sendMessage(toolResponses as any);
+      response = await chat.sendMessage({
+        message: toolResponses as any
+      });
     }
 
     if (iterations >= 3) {
-      return NextResponse.json({ text: response.text + '\n\n[Agent stopped: Maximum investigation steps reached.]' });
+      return NextResponse.json({ text: (response.text || '') + '\n\n[Agent stopped: Maximum investigation steps reached.]' });
     }
 
-    return NextResponse.json({ text: response.text });
+    return NextResponse.json({ text: response.text || executeOfflineFallback(userPrompt) });
   } catch (error: any) {
-    console.error('Agent error:', error);
-    return NextResponse.json(
-      { error: 'An error occurred during agent investigation.' },
-      { status: 500 }
-    );
+    console.error('Agent error, falling back to deterministic response:', error);
+    const fallbackText = executeOfflineFallback(userPrompt);
+    return NextResponse.json({ 
+      text: fallbackText + `\n\n*(Note: Operating in deterministic verification mode. Provider error: ${error?.message || 'AI provider unavailable'})*`
+    });
   }
 }
